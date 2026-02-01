@@ -87,7 +87,7 @@ ARH provides a **Trust Report** that combines:
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/agent-reliability-harness.git
+git clone https://github.com/akhilkinnera01/agent-reliability-harness.git
 cd agent-reliability-harness
 pip install -r requirements.txt
 ```
@@ -221,9 +221,10 @@ agent-reliability-harness/
 
 ARH's Adversarial Auditor is inspired by the **Dr. Zero** research paper:
 
-> *"Dr. Zero: A zero-shot approach to adversarial question generation for document evaluation"*
+> *Dr. Zero: Self-Evolving Search Agents without Training Data* — arXiv:2601.07055 (January 2026)
 
-See [docs/DRZERO_CONNECTION.md](docs/DRZERO_CONNECTION.md) for details.
+We apply its insight that "partial solver failure indicates interesting
+problems" to documentation quality rather than model training.
 
 ---
 
@@ -251,6 +252,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Built with ❤️ for reliable AI**
 
-[Documentation](docs/GETTING-STARTED.md) • [Examples](examples/) • [Research](docs/DRZERO_CONNECTION.md)
+[Quick Start](Start.md) • [Examples](examples/)
 
 </div>

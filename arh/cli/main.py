@@ -128,7 +128,11 @@ def audit(
                 return AgentResponse(content="mock", latency_ms=0, model="simple")
         
         auditor = AdversarialAuditor(proposer_model=MockAgent())
-        
+
+        console.print(
+            "[yellow]⚠ --simple is DEMO-ONLY: keyword matching, not a reliability "
+            "signal. Run with --api-key for a real audit.[/yellow]"
+        )
         with console.status("[bold green]Running simple audit..."):
             report = auditor.audit_simple(content, document_name=document.name)
     else:
@@ -208,7 +212,7 @@ def version():
     console = get_console()
     console.print("[bold]Agent Reliability Harness (ARH)[/bold]")
     console.print("Version: 0.1.0")
-    console.print("https://github.com/your-org/agent-reliability-harness")
+    console.print("https://github.com/akhilkinnera01/agent-reliability-harness")
 
 
 def _display_reliability_results(console, report: dict):

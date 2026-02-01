@@ -8,7 +8,7 @@ ARH is a production-oriented trust and evaluation layer for LLM agents. Instead 
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/agent-reliability-harness.git
+git clone https://github.com/akhilkinnera01/agent-reliability-harness.git
 cd agent-reliability-harness
 pip install -r requirements.txt
 
@@ -118,11 +118,9 @@ agent-reliability-harness/
 
 ARH's Adversarial Auditor is inspired by the proposer-solver framework from:
 
-> Yue et al. "Dr. Zero: Self-Evolving Search Agents without Training Data" (Meta, January 2025)
+> Yue et al. "Dr. Zero: Self-Evolving Search Agents without Training Data" — arXiv:2601.07055 (January 2026)
 
 We apply the insight that "partial solver failure indicates interesting problems" to documentation quality, rather than model training.
-
-See [docs/DRZERO_CONNECTION.md](docs/DRZERO_CONNECTION.md) for details.
 
 ## Requirements
 

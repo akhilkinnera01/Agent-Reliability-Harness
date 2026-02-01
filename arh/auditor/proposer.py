@@ -147,8 +147,10 @@ Generate questions:"""
     
     def generate_questions_simple(self, section: str, num_questions: int = 5) -> List[Dict]:
         """
-        Generate questions without requiring an LLM (for testing/demos).
-        
+        DEMO-ONLY — NOT A RELIABILITY SIGNAL. Returns fixed templated
+        questions ignoring document content; use the LLM proposer for real
+        audits.
+
         Args:
             section: Section text to generate questions about
             num_questions: Number of questions to generate
