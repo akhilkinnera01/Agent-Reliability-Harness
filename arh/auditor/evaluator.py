@@ -70,22 +70,25 @@ class Evaluator:
             recommendation=recommendation
         )
     
+    # Proposer's FLAW_IF_MISSING string -> FlawType, by enum name.
+    _EXPECTED_FLAW_MAP = {ft.name: ft for ft in FlawType}
+
     def _classify_flaw(self, question: Dict, response: SolverResponse) -> Optional[FlawType]:
         """Classify the type of documentation flaw."""
-        
+
         # Use expected flaw if provided by proposer
-        expected = question.get('expected_flaw', '').upper()
+        expected = question.get('expected_flaw', '').strip().upper()
         question_text = question.get('question', '').lower()
-        
+
         if response.status == "NOT_FOUND":
-            # Check for safety-related questions
+            # Safety questions are critical regardless of the proposer's tag.
             safety_keywords = ['safety', 'hazard', 'danger', 'warning', 'caution', 'risk', 'harm']
             if any(word in question_text for word in safety_keywords):
                 return FlawType.SAFETY_GAP
-            if expected == "MISSING_PREREQ":
-                return FlawType.MISSING_PREREQ
-            return FlawType.MISSING_PREREQ
-        
+            # Honor the proposer's expected flaw across the full FlawType set,
+            # defaulting to MISSING_PREREQ when it gave nothing usable.
+            return self._EXPECTED_FLAW_MAP.get(expected, FlawType.MISSING_PREREQ)
+
         elif response.status == "AMBIGUOUS":
             return FlawType.AMBIGUOUS
         
@@ -174,5 +177,24 @@ class Evaluator:
             count = sum(1 for f in findings if f.flaw_type == flaw_type)
             if count > 0:
                 summary["by_type"][flaw_type.value] = count
-        
+
         return summary
+
+
+if __name__ == "__main__":
+    # ponytail: smallest check that fails if the NOT_FOUND dead branch regresses.
+    e = Evaluator()
+    r = SolverResponse(answer=None, confidence=0.0, status="NOT_FOUND",
+                       citations=[], missing_info=[], raw_response="")
+    # expected_flaw must be honored across the full set, not collapsed to MISSING_PREREQ
+    assert e._classify_flaw({"question": "x", "expected_flaw": "IMPLICIT_ASSUMPTION"}, r) \
+        == FlawType.IMPLICIT_ASSUMPTION
+    assert e._classify_flaw({"question": "x", "expected_flaw": "TEMPORAL_GAP"}, r) \
+        == FlawType.TEMPORAL_GAP
+    # safety keyword overrides the tag
+    assert e._classify_flaw({"question": "what safety steps?", "expected_flaw": "AMBIGUOUS"}, r) \
+        == FlawType.SAFETY_GAP
+    # garbage tag falls back
+    assert e._classify_flaw({"question": "x", "expected_flaw": "???"}, r) \
+        == FlawType.MISSING_PREREQ
+    print("OK")
