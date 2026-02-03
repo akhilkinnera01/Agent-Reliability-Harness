@@ -5,6 +5,7 @@ Generates adversarial questions designed to expose documentation flaws.
 Inspired by Dr. Zero's proposer-solver framework.
 """
 
+import re
 from typing import List, Dict
 from enum import Enum
 from ..core.agent_wrapper import AgentWrapper
@@ -122,27 +123,46 @@ FLAW_IF_MISSING: [AMBIGUOUS|MISSING_PREREQ|IMPLICIT_ASSUMPTION|SAFETY_GAP]
 Generate questions:"""
 
     def _parse_questions(self, response: str, hop: HopComplexity) -> List[Dict]:
-        """Parse generated questions from model response."""
+        """
+        Parse generated questions from model response.
+
+        Tolerant of format drift: accepts ``Q1:``, ``Q1)``, ``1.``, ``Question:``
+        for questions and case-insensitive ``TARGET``/``FLAW_IF_MISSING`` (with
+        optional markdown) for the fields, so a reworded label does not silently
+        drop a finding.
+
+        # ponytail: regex line-matching. JSON-mode prompting is the sturdier
+        # upgrade if a provider still slips the format.
+        """
         questions = []
         current_q = {}
-        
-        for line in response.split('\n'):
-            line = line.strip()
-            if line.startswith('Q') and ':' in line:
-                if current_q and 'question' in current_q:
+
+        q_re = re.compile(r'^\**\s*(?:Q\s*\d*|Question|\d+)\s*\**\s*[:.)]\s*(.+)', re.I)
+        target_re = re.compile(r'^\**\s*TARGET\s*\**\s*[:\-]\s*(.+)', re.I)
+        flaw_re = re.compile(r'^\**\s*FLAW(?:_IF_MISSING)?\s*\**\s*[:\-]\s*(.+)', re.I)
+
+        def _clean(s: str) -> str:
+            return s.strip().strip('*[]').strip()
+
+        for raw in response.splitlines():
+            line = re.sub(r'^[-*•]\s+', '', raw.strip())  # drop leading bullet
+            # Check field labels before the question pattern (a "1." prefix on a
+            # field line would otherwise be misread as a new question).
+            mf = flaw_re.match(line)
+            mt = target_re.match(line)
+            mq = q_re.match(line)
+            if mf:
+                current_q['expected_flaw'] = _clean(mf.group(1)).upper()
+            elif mt:
+                current_q['target'] = _clean(mt.group(1))
+            elif mq:
+                if current_q.get('question'):
                     questions.append(current_q)
-                current_q = {
-                    'question': line.split(':', 1)[1].strip(),
-                    'hop_complexity': hop.value
-                }
-            elif line.startswith('TARGET:'):
-                current_q['target'] = line.split(':', 1)[1].strip()
-            elif line.startswith('FLAW_IF_MISSING:'):
-                current_q['expected_flaw'] = line.split(':', 1)[1].strip()
-        
-        if current_q and 'question' in current_q:
+                current_q = {'question': _clean(mq.group(1)), 'hop_complexity': hop.value}
+
+        if current_q.get('question'):
             questions.append(current_q)
-        
+
         return questions
     
     def generate_questions_simple(self, section: str, num_questions: int = 5) -> List[Dict]:
@@ -173,3 +193,19 @@ Generate questions:"""
         ]
         
         return templates[:num_questions]
+
+
+if __name__ == "__main__":
+    # ponytail: smallest check that fails if tolerant question parsing regresses.
+    p = Proposer.__new__(Proposer)  # no model needed for pure parsing
+    qs = p._parse_questions(
+        "**Q1)** What is X?\n- TARGET: the X value\n**FLAW_IF_MISSING** - AMBIGUOUS\n"
+        "2. What is Y?",
+        HopComplexity.ONE,
+    )
+    assert len(qs) == 2, qs
+    assert qs[0]["question"] == "What is X?", qs[0]
+    assert qs[0]["target"] == "the X value", qs[0]
+    assert qs[0]["expected_flaw"] == "AMBIGUOUS", qs[0]
+    assert qs[1]["question"] == "What is Y?", qs[1]
+    print("OK")
