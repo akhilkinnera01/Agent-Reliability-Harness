@@ -1,0 +1,9 @@
+{
+  "document": "flawed_manual.md",
+  "note": "Gold key of flaws deliberately seeded into flawed_manual.md. clean_manual.md is the same procedure written completely and should yield near-zero findings.",
+  "seeded": [
+    {"flaw_type": "safety_gap", "about": "Reagent X is corrosive; no PPE / handling / first-aid info"},
+    {"flaw_type": "missing_prerequisite", "about": "buffer must be calibrated to pH 7 first; not stated"},
+    {"flaw_type": "ambiguous", "about": "'heat until it is ready' gives no temperature or time"}
+  ]
+}
