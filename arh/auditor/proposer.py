@@ -164,7 +164,31 @@ Generate questions:"""
             questions.append(current_q)
 
         return questions
-    
+
+    def is_answerable(self, question: str, document: str) -> bool:
+        """
+        Answerability gate (soundness check).
+
+        A NOT_FOUND is only a real documentation gap if a *complete* version of
+        this document SHOULD answer the question. This filters out-of-scope
+        questions — the auditor's biggest false-positive source.
+
+        Fails open (returns True) on judge error so real gaps are never hidden
+        by a transient failure.
+        """
+        prompt = (
+            "A document is being audited for gaps. Independent of whether the "
+            "current text answers it, decide: SHOULD a complete, high-quality "
+            "version of this document reasonably be expected to answer the "
+            "QUESTION, given the document's topic and purpose? "
+            "Answer with exactly YES or NO.\n\n"
+            f"DOCUMENT (excerpt):\n{document[:2000]}\n\nQUESTION: {question}"
+        )
+        resp = self.model.query(prompt, temperature=0.0)
+        if resp.error:
+            return True
+        return "NO" not in resp.content.strip().upper()[:6]
+
     def generate_questions_simple(self, section: str, num_questions: int = 5) -> List[Dict]:
         """
         DEMO-ONLY — NOT A RELIABILITY SIGNAL. Returns fixed templated
