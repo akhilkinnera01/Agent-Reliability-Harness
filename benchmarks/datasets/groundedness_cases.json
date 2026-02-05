@@ -1,0 +1,13 @@
+{
+  "note": "Labeled (source, answer) pairs for validating groundedness. grounded=true means every claim in the answer is supported by the source; false means the answer adds unsupported facts or contradicts the source (hallucination).",
+  "cases": [
+    {"source": "The Eiffel Tower is 330 metres tall and is located in Paris, France.", "answer": "The Eiffel Tower is in Paris and stands 330 metres tall.", "grounded": true},
+    {"source": "Our return policy allows refunds within 30 days with a valid receipt.", "answer": "You can get a refund within 30 days as long as you have a receipt.", "grounded": true},
+    {"source": "The server runs Ubuntu 22.04 and uses PostgreSQL 15 for storage.", "answer": "Storage is handled by PostgreSQL 15.", "grounded": true},
+    {"source": "Water freezes at 0 C and boils at 100 C at sea level.", "answer": "At sea level, water boils at 100 C.", "grounded": true},
+    {"source": "The Eiffel Tower is located in Paris.", "answer": "The Eiffel Tower is located in Paris and was built in 1850.", "grounded": false},
+    {"source": "Our return policy allows refunds within 30 days.", "answer": "Refunds are allowed within 90 days and include free return shipping.", "grounded": false},
+    {"source": "The server runs Ubuntu 22.04.", "answer": "The server runs Windows Server 2019.", "grounded": false},
+    {"source": "Water boils at 100 C at sea level.", "answer": "Water boils at 100 C and is toxic to humans.", "grounded": false}
+  ]
+}
