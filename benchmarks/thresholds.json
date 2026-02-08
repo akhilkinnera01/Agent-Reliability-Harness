@@ -1,0 +1,10 @@
+{
+  "similarity": {
+    "threshold": 0.768,
+    "precision": 0.75,
+    "recall": 1.0,
+    "auc": 0.722,
+    "n": 12,
+    "backend": "sentence-transformers (all-MiniLM-L6-v2)"
+  }
+}
