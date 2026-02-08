@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # [semantic] pulls sentence-transformers so the similarity gate is enforced.
+      - name: Install
+        run: pip install -e .[semantic]
+
+      - name: Module self-checks
+        run: |
+          for m in \
+            arh.core.similarity \
+            arh.tests.consistency \
+            arh.tests.groundedness \
+            arh.auditor.evaluator \
+            arh.auditor.solver \
+            arh.auditor.proposer \
+            arh.auditor.auditor \
+            benchmarks.metrics \
+            benchmarks.check_auditor_acceptance \
+            benchmarks.validate_groundedness; do
+            echo "== $m =="; python -m "$m"
+          done
+
+      # Regression gate. groundedness/auditor self-skip without GEMINI_API_KEY;
+      # similarity is enforced because sentence-transformers is installed above.
+      - name: Validation gate
+        run: python -m benchmarks.validate

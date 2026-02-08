@@ -228,6 +228,37 @@ problems" to documentation quality rather than model training.
 
 ---
 
+## 🔬 Validation
+
+A score you cannot validate is just an opinion. ARH ships a meta-evaluation
+harness (`benchmarks/`) that runs the metrics against **labeled data** and
+reports how well each score tracks ground truth — the number ARH itself should
+be judged on.
+
+| Metric | Backend | Dataset | AUC | Threshold | Precision / Recall |
+|--------|---------|---------|-----|-----------|--------------------|
+| Similarity (robustness/consistency) | `all-MiniLM-L6-v2` | 12 paraphrase / off-topic / contradiction pairs | **0.72** | 0.77 | 0.75 / 1.00 |
+| Groundedness | LLM judge | 8 grounded / hallucinated cases | harness ready¹ | — | — |
+| Auditor | LLM judge | seeded-flaw + clean doc | harness ready¹ | — | — |
+
+Reproduce:
+
+```bash
+pip install -e .[semantic]
+python -m benchmarks.validate            # similarity (offline) + scorecard
+python -m benchmarks.calibrate           # re-pick + record thresholds.json
+GEMINI_API_KEY=... python -m benchmarks.validate   # full suite incl. groundedness/auditor
+```
+
+The residual similarity errors are **contradiction pairs** ("turn left" vs
+"turn right") — topically near-identical, so cosine rates them similar. That gap
+is exactly why groundedness uses **NLI entailment**, not cosine.
+
+¹ The groundedness and auditor benchmarks are implemented and pass their offline
+logic checks; published AUC numbers require a generative LLM with adequate quota
+(set `GEMINI_API_KEY`). CI enforces the similarity baseline and fails on
+regression (`.github/workflows/ci.yml`).
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read our contributing guidelines first.
