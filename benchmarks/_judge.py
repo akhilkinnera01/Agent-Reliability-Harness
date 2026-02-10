@@ -38,14 +38,18 @@ class ThrottledJudge:
         return resp
 
 
-def get_judge(model: str = "gemini/gemini-2.0-flash"):
-    """Return a throttled live judge if an API key is set, else None."""
+def get_judge(model: str = None):
+    """Return a throttled live judge if an API key is set, else None.
+
+    Throttle interval is provider-aware: Gemini free tier is ~5 req/min (13s),
+    OpenAI paid limits are far higher (1s is plenty)."""
+    from arh.core.agent_wrapper import UniversalWrapper
     if os.getenv("GEMINI_API_KEY"):
-        from arh.core.agent_wrapper import UniversalWrapper
-        return ThrottledJudge(UniversalWrapper(model=model))
+        return ThrottledJudge(UniversalWrapper(model=model or "gemini/gemini-2.0-flash"),
+                              min_interval=13.0)
     if os.getenv("OPENAI_API_KEY"):
-        from arh.core.agent_wrapper import UniversalWrapper
-        return ThrottledJudge(UniversalWrapper(model="gpt-4o-mini"))
+        return ThrottledJudge(UniversalWrapper(model=model or "gpt-4o-mini"),
+                              min_interval=1.0)
     return None
 
 
