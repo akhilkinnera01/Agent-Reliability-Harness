@@ -48,6 +48,8 @@ def run(judge) -> dict:
         "recall": round(r, 3),
         "f1": round(f, 3),
         "correlation": round(metrics.point_biserial(scores, labels), 3),
+        "scores": [round(s, 4) for s in scores],
+        "labels": labels,
     }
 
 
