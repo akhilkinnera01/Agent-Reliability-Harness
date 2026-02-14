@@ -33,7 +33,7 @@ class ThrottledJudge:
             # as retryable so it never silently corrupts a run.
             if not resp.error and resp.content.strip():
                 return resp
-            time.sleep(min(60.0, 12.0 * (attempt + 1)))  # backoff before retry
+            time.sleep(min(20.0, 3.0 * (attempt + 1)))  # short backoff; 503s recover fast
         return resp
 
 
@@ -46,7 +46,7 @@ def get_judge(model: str = None):
     from arh.core.agent_wrapper import UniversalWrapper
     model = model or os.getenv("ARH_JUDGE_MODEL")
     if model:
-        interval = 5.0 if model.startswith("gemini") else 1.0
+        interval = 1.5 if model.startswith("gemini") else 1.0
         return ThrottledJudge(UniversalWrapper(model=model), min_interval=interval)
     if os.getenv("GEMINI_API_KEY"):
         return ThrottledJudge(UniversalWrapper(model="gemini/gemini-2.5-flash-lite"),
