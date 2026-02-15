@@ -45,6 +45,17 @@ def load() -> list:
     return out
 
 
+def auc_ci(data, rng, B=2000):
+    """Bootstrap 95% CI for each model's AUC; yields (lo, hi, auc)."""
+    from benchmarks import metrics
+    for r in data:
+        s = np.array(r["scores"]); y = np.array(r["labels"]); n = len(y)
+        boot = [metrics.roc_auc(s[i].tolist(), y[i].tolist())
+                for i in (rng.integers(0, n, n) for _ in range(B))]
+        lo, hi = np.percentile(boot, [2.5, 97.5])
+        yield lo, hi, r["auc"]
+
+
 def roc_points(scores, labels):
     """Sweep thresholds high->low, return (fpr, tpr) arrays."""
     s = np.array(scores)
@@ -99,14 +110,20 @@ def main():
     fig.tight_layout()
     fig.savefig(PLOTS / "distributions.png", dpi=130); plt.close(fig)
 
-    # 3. AUC / F1 bars grouped by model
+    # 3. AUC / F1 bars grouped by model, with bootstrap 95% CI error bars on AUC
     labels = [short(r["model"]) for r in data]
     auc = [r["auc"] for r in data]
     f1 = [r["f1"] for r in data]
     colors = [PROVIDER_COLOR[provider(r["model"])] for r in data]
+    rng = np.random.default_rng(0)
+    yerr = [[], []]
+    for r in auc_ci(data, rng):
+        lo, hi, a = r
+        yerr[0].append(a - lo); yerr[1].append(hi - a)
     x = np.arange(len(data)); w = 0.38
     plt.figure(figsize=(max(7, len(data) * 1.3), 5))
-    plt.bar(x - w / 2, auc, w, label="AUC", color=colors)
+    plt.bar(x - w / 2, auc, w, label="AUC (95% CI)", color=colors,
+            yerr=yerr, capsize=4, ecolor="#333")
     plt.bar(x + w / 2, f1, w, label="F1", color=colors, alpha=0.5)
     for i, (a, f) in enumerate(zip(auc, f1)):
         plt.text(i - w / 2, a + 0.01, f"{a:.2f}", ha="center", fontsize=8)

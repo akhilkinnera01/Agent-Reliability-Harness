@@ -266,20 +266,28 @@ on the **same 500 HaluEval QA cases**:
   <img src="benchmarks/plots/distributions.png" width="430"/>
 </p>
 
-What the data actually says (nothing here is tuned to a target):
+What the data actually says — tested for significance with a 2000-sample
+bootstrap (95% CIs are the error bars above), nothing tuned to a target:
 
-- **`gpt-4o-mini` leads the field** (AUC 0.87) and shows the cleanest score
-  separation — hallucinated answers collapse to 0, grounded ones to 1.
-- **Newer ≠ better on a narrow task.** Within OpenAI, `gpt-4o-mini` (2024) beats
-  the *later* `gpt-4.1-mini` (2025) at faithfulness detection.
-- **Size helps within a generation.** Google's larger `gemini-2.5-flash` (0.814)
-  edges its `flash-lite` sibling (0.787).
+- **`gpt-4o-mini` leads the field** (AUC 0.87, CI [0.84, 0.90]) with the cleanest
+  score separation — hallucinated answers collapse to 0, grounded ones to 1.
+- **Newer ≠ better on a narrow task.** `gpt-4o-mini` (2024) beats the *later*
+  `gpt-4.1-mini` (2025) — and the gap **is** real (paired bootstrap P=1.00).
 - **`claude-haiku-4-5` trails** (AUC 0.70) with high recall / low precision: it
-  *over-trusts* answers, calling hallucinations grounded. A behavioral signal,
-  not a bug — and exactly the kind of thing the harness exists to surface.
+  *over-trusts* answers, calling hallucinations grounded — real (P=0.97 vs
+  gpt-3.5-turbo). A behavioral signal, not a bug; exactly what the harness exists
+  to surface.
+- **What is _not_ significant:** `gemini-2.5-flash` vs `flash-lite` (0.814 vs
+  0.787) sits inside the noise (P=0.84) — at n=500 we can't call that a real
+  difference, so we don't.
 
-AUCs land in the **0.70–0.87** band, consistent with the range reported for
-LLM-based detectors on HaluEval — realistic scores, not saturated 1.0s.
+**What these numbers are (and aren't).** They measure how well each model, used
+as a *judge*, separates grounded from hallucinated answers — i.e. each model's
+skill as a faithfulness **detector**, not how much it itself hallucinates. The
+hallucinations in HaluEval are model-generated (synthetic), which the literature
+shows is *easier* than organic, real-world hallucinations; expect lower AUC on
+production data (e.g. RAGTruth). AUCs land in the **0.70–0.87** band, consistent
+with published LLM-detector results on HaluEval — realistic, not saturated.
 
 Reproduce:
 
