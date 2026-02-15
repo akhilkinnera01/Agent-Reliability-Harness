@@ -261,9 +261,13 @@ on the **same 500 HaluEval QA cases**:
 | Anthropic | `claude-haiku-4-5` | 0.703 | 0.612 | 0.928 | 0.738 |
 
 <p align="center">
-  <img src="benchmarks/plots/comparison.png" width="640"/><br/>
-  <img src="benchmarks/plots/roc.png" width="430"/>
-  <img src="benchmarks/plots/distributions.png" width="430"/>
+  <img src="benchmarks/plots/comparison.png" width="780" alt="Groundedness AUC by model with 95% confidence intervals"/>
+</p>
+<p align="center">
+  <img src="benchmarks/plots/roc.png" width="460" alt="Groundedness ROC curves"/>
+</p>
+<p align="center">
+  <img src="benchmarks/plots/distributions.png" width="840" alt="Grounded vs hallucinated score distributions per model"/>
 </p>
 
 What the data actually says — tested for significance with a 2000-sample
@@ -288,6 +292,28 @@ hallucinations in HaluEval are model-generated (synthetic), which the literature
 shows is *easier* than organic, real-world hallucinations; expect lower AUC on
 production data (e.g. RAGTruth). AUCs land in the **0.70–0.87** band, consistent
 with published LLM-detector results on HaluEval — realistic, not saturated.
+
+### External validation — does our ranking match reality?
+
+A self-reported benchmark proves nothing on its own. So we cross-checked our
+ranking against the independent, public **[Vectara Hallucination Leaderboard](https://github.com/vectara/hallucination-leaderboard)**
+(HHEM), which measures hallucination on a different task (document summarization)
+and in a different role (the model as *generator*, not *judge*).
+
+- **Our most surprising result is corroborated.** We rank `claude-haiku-4-5`
+  **last** on groundedness; Vectara independently gives it the **highest
+  hallucination rate (~9.8%)** of this group. Two different harnesses, same
+  verdict: a capable, modern model that is nonetheless the least faithful here.
+- **Our "newer ≠ better" finding is a documented industry effect.** Vectara
+  calls it the **"reasoning tax"** — more advanced / reasoning-tuned models tend
+  to hallucinate *more* on grounded tasks. Our `gpt-4o-mini` (2024) beating the
+  later `gpt-4.1-mini` (2025) is the same effect in miniature.
+- **Where it differs is expected:** Vectara ranks `gemini-2.5-flash-lite` #1
+  because it is a faithful *generator*; we rank it mid-pack because it is a
+  middling *judge*. Different role, different leaderboard — both true.
+
+So directionally the harness tracks reality on what matters; the absolute AUCs
+are an optimistic ceiling because HaluEval's hallucinations are synthetic.
 
 Reproduce:
 
