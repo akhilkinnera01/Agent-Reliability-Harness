@@ -1,0 +1,17 @@
+{
+  "note": "Labeled text pairs for validating the semantic-similarity backbone behind robustness and consistency. equivalent=true means same meaning (should score high); false includes off-topic, different-fact, and contradiction pairs (should score low).",
+  "pairs": [
+    {"a": "How do I reset my password?", "b": "What's the process for changing my login credentials?", "equivalent": true},
+    {"a": "The meeting is at 3pm tomorrow.", "b": "Tomorrow's meeting starts at 15:00.", "equivalent": true},
+    {"a": "Water boils at 100 degrees Celsius at sea level.", "b": "At sea level, water reaches its boiling point at 100 C.", "equivalent": true},
+    {"a": "The cat sat on the mat.", "b": "A cat was sitting on the rug.", "equivalent": true},
+    {"a": "Python is a popular programming language.", "b": "Many developers use the Python programming language.", "equivalent": true},
+    {"a": "Turn left at the next intersection.", "b": "Make a left at the upcoming junction.", "equivalent": true},
+    {"a": "The store opens at 9am.", "b": "The store opens at 5pm.", "equivalent": false},
+    {"a": "Paris is the capital of France.", "b": "Berlin is the capital of Germany.", "equivalent": false},
+    {"a": "How do I reset my password?", "b": "What is the weather like in Tokyo today?", "equivalent": false},
+    {"a": "The project deadline is Friday.", "b": "I prefer tea over coffee in the morning.", "equivalent": false},
+    {"a": "Water boils at 100 degrees Celsius.", "b": "Ice melts at 0 degrees Celsius.", "equivalent": false},
+    {"a": "Turn left at the intersection.", "b": "Turn right at the intersection.", "equivalent": false}
+  ]
+}

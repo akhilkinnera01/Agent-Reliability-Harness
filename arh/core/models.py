@@ -18,6 +18,7 @@ class TestStatus(Enum):
     FAIL = "fail"
     CONDITIONAL = "conditional"
     ERROR = "error"
+    SKIPPED = "skipped"
 
 
 class FlawType(Enum):

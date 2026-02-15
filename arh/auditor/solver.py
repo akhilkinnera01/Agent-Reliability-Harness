@@ -5,6 +5,7 @@ Attempts to answer questions using ONLY the provided document.
 Constrained solver that cannot use external knowledge.
 """
 
+import re
 from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 from ..core.agent_wrapper import AgentWrapper
@@ -82,54 +83,54 @@ MISSING: [what additional info would be needed, or "N/A"]"""
         return self._parse_response(response.content)
     
     def _parse_response(self, response: str) -> SolverResponse:
-        """Parse solver response into structured format."""
-        lines = response.strip().split('\n')
-        
-        status = "NOT_FOUND"
+        """
+        Parse solver response into structured format.
+
+        Tolerant of format drift: case-insensitive, optional markdown bold
+        around labels, and ':' or '-' separators. A drifted label must not
+        silently drop a finding.
+
+        # ponytail: regex field-grab. JSON-mode prompting is the sturdier
+        # upgrade if a provider still slips the format.
+        """
+        def _field(name: str):
+            m = re.search(rf'\**\s*{name}\s*\**\s*[:\-]\s*(.+)', response, re.I)
+            return m.group(1).strip().strip('*').strip() if m else None
+
+        # Status: check NOT_FOUND before FOUND ("FOUND" is a substring of it).
+        raw_status = (_field('STATUS') or '').upper()
+        status = next(
+            (s for s in ["NOT_FOUND", "AMBIGUOUS", "PARTIAL", "FOUND"] if s in raw_status),
+            "NOT_FOUND",
+        )
+
         confidence = 0.0
-        answer = None
-        citations = []
-        missing = []
-        
-        for line in lines:
-            line = line.strip()
-            if line.startswith('STATUS:'):
-                status = line.split(':', 1)[1].strip().upper()
-                # Normalize status
-                if status not in ["FOUND", "NOT_FOUND", "AMBIGUOUS", "PARTIAL"]:
-                    status = "NOT_FOUND"
-            elif line.startswith('CONFIDENCE:'):
-                try:
-                    conf_str = line.split(':', 1)[1].strip().replace('%', '')
-                    confidence = float(conf_str) / 100
-                    confidence = max(0.0, min(1.0, confidence))  # Clamp to [0, 1]
-                except:
-                    confidence = 0.0
-            elif line.startswith('ANSWER:'):
-                answer = line.split(':', 1)[1].strip()
-            elif line.startswith('CITATION:'):
-                cite = line.split(':', 1)[1].strip()
-                if cite and cite != "N/A":
-                    citations.append(cite)
-            elif line.startswith('MISSING:'):
-                miss = line.split(':', 1)[1].strip()
-                if miss and miss != "N/A":
-                    missing.append(miss)
-        
+        conf_raw = _field('CONFIDENCE')
+        if conf_raw:
+            m = re.search(r'\d+(?:\.\d+)?', conf_raw)
+            if m:
+                confidence = max(0.0, min(1.0, float(m.group()) / 100))
+
+        answer = _field('ANSWER')
+        cite = _field('CITATION')
+        miss = _field('MISSING')
+        citations = [cite] if cite and cite.upper() != "N/A" else []
+        missing = [miss] if miss and miss.upper() != "N/A" else []
+
         return SolverResponse(
             answer=answer,
             confidence=confidence,
             status=status,
             citations=citations,
             missing_info=missing,
-            raw_response=response
+            raw_response=response,
         )
     
     def answer_simple(self, question: str, document: str) -> SolverResponse:
         """
-        Simple answer method without LLM (for testing/demos).
-        Searches document for keywords from the question.
-        
+        DEMO-ONLY — NOT A RELIABILITY SIGNAL. Answers by keyword overlap, not
+        comprehension; use the LLM solver for real audits.
+
         Args:
             question: The question to answer
             document: The document to search
@@ -171,3 +172,14 @@ MISSING: [what additional info would be needed, or "N/A"]"""
                 missing_info=["No relevant information found in document"],
                 raw_response="No keyword match"
             )
+
+
+if __name__ == "__main__":
+    # ponytail: smallest check that fails if tolerant parsing regresses.
+    s = Solver.__new__(Solver)  # no model needed for pure parsing
+    r = s._parse_response("**STATUS:** NOT_FOUND\n**Confidence** - 30%\nANSWER: n/a")
+    assert r.status == "NOT_FOUND", r.status          # not the "FOUND" substring trap
+    assert abs(r.confidence - 0.30) < 1e-9, r.confidence
+    r2 = s._parse_response("status: found\nconfidence: 90\nCITATION: line 4")
+    assert r2.status == "FOUND" and r2.citations == ["line 4"], r2
+    print("OK")

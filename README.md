@@ -87,7 +87,7 @@ ARH provides a **Trust Report** that combines:
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/agent-reliability-harness.git
+git clone https://github.com/akhilkinnera01/agent-reliability-harness.git
 cd agent-reliability-harness
 pip install -r requirements.txt
 ```
@@ -221,11 +221,115 @@ agent-reliability-harness/
 
 ARH's Adversarial Auditor is inspired by the **Dr. Zero** research paper:
 
-> *"Dr. Zero: A zero-shot approach to adversarial question generation for document evaluation"*
+> *Dr. Zero: Self-Evolving Search Agents without Training Data* — arXiv:2601.07055 (January 2026)
 
-See [docs/DRZERO_CONNECTION.md](docs/DRZERO_CONNECTION.md) for details.
+We apply its insight that "partial solver failure indicates interesting
+problems" to documentation quality rather than model training.
 
 ---
+
+## 🔬 Validation
+
+A score you cannot validate is just an opinion. ARH ships a meta-evaluation
+harness (`benchmarks/`) that runs the metrics against **labeled data** and
+reports how well each score tracks ground truth — the number ARH itself should
+be judged on.
+
+The robustness/consistency backbone is scored against a labeled similarity set;
+groundedness is scored against a sample of **[HaluEval](https://github.com/RUCAIBox/HaluEval)**
+(Li et al., 2023) — the standard hallucination-detection benchmark — so the
+numbers are comparable to published work rather than self-defined.
+
+| Metric | Backend | Dataset | AUC | Precision / Recall |
+|--------|---------|---------|-----|--------------------|
+| Similarity (robustness/consistency) | `all-MiniLM-L6-v2` | 12 paraphrase / off-topic / contradiction pairs | **0.72** | 0.75 / 1.00 |
+| Groundedness | `gpt-4o-mini` | HaluEval QA, 500 cases | **0.87** | 0.79 / 0.99 |
+
+### Model comparison — the harness must *discriminate*
+
+A reliability layer is only worth anything if it ranks a weaker agent below a
+stronger one on the same data. **Six cheap models from three providers**, scored
+on the **same 500 HaluEval QA cases**:
+
+| Provider | Judge model | AUC | Precision | Recall | F1 |
+|----------|-------------|-----|-----------|--------|-----|
+| OpenAI | `gpt-3.5-turbo` | 0.757 | 0.727 | 0.840 | 0.779 |
+| OpenAI | **`gpt-4o-mini`** | **0.869** | 0.794 | 0.988 | **0.881** |
+| OpenAI | `gpt-4.1-mini` | 0.805 | 0.766 | 0.892 | 0.824 |
+| Google | `gemini-2.5-flash-lite` | 0.787 | 0.770 | 0.872 | 0.818 |
+| Google | `gemini-2.5-flash` | 0.814 | 0.772 | 0.868 | 0.817 |
+| Anthropic | `claude-haiku-4-5` | 0.703 | 0.612 | 0.928 | 0.738 |
+
+<p align="center">
+  <img src="benchmarks/plots/comparison.png" width="780" alt="Groundedness AUC by model with 95% confidence intervals"/>
+</p>
+<p align="center">
+  <img src="benchmarks/plots/roc.png" width="460" alt="Groundedness ROC curves"/>
+</p>
+<p align="center">
+  <img src="benchmarks/plots/distributions.png" width="840" alt="Grounded vs hallucinated score distributions per model"/>
+</p>
+
+What the data actually says — tested for significance with a 2000-sample
+bootstrap (95% CIs are the error bars above), nothing tuned to a target:
+
+- **`gpt-4o-mini` leads the field** (AUC 0.87, CI [0.84, 0.90]) with the cleanest
+  score separation — hallucinated answers collapse to 0, grounded ones to 1.
+- **Newer ≠ better on a narrow task.** `gpt-4o-mini` (2024) beats the *later*
+  `gpt-4.1-mini` (2025) — and the gap **is** real (paired bootstrap P=1.00).
+- **`claude-haiku-4-5` trails** (AUC 0.70) with high recall / low precision: it
+  *over-trusts* answers, calling hallucinations grounded — real (P=0.97 vs
+  gpt-3.5-turbo). A behavioral signal, not a bug; exactly what the harness exists
+  to surface.
+- **What is _not_ significant:** `gemini-2.5-flash` vs `flash-lite` (0.814 vs
+  0.787) sits inside the noise (P=0.84) — at n=500 we can't call that a real
+  difference, so we don't.
+
+**What these numbers are (and aren't).** They measure how well each model, used
+as a *judge*, separates grounded from hallucinated answers — i.e. each model's
+skill as a faithfulness **detector**, not how much it itself hallucinates. The
+hallucinations in HaluEval are model-generated (synthetic), which the literature
+shows is *easier* than organic, real-world hallucinations; expect lower AUC on
+production data (e.g. RAGTruth). AUCs land in the **0.70–0.87** band, consistent
+with published LLM-detector results on HaluEval — realistic, not saturated.
+
+### External validation — does our ranking match reality?
+
+A self-reported benchmark proves nothing on its own. So we cross-checked our
+ranking against the independent, public **[Vectara Hallucination Leaderboard](https://github.com/vectara/hallucination-leaderboard)**
+(HHEM), which measures hallucination on a different task (document summarization)
+and in a different role (the model as *generator*, not *judge*).
+
+- **Our most surprising result is corroborated.** We rank `claude-haiku-4-5`
+  **last** on groundedness; Vectara independently gives it the **highest
+  hallucination rate (~9.8%)** of this group. Two different harnesses, same
+  verdict: a capable, modern model that is nonetheless the least faithful here.
+- **Our "newer ≠ better" finding is a documented industry effect.** Vectara
+  calls it the **"reasoning tax"** — more advanced / reasoning-tuned models tend
+  to hallucinate *more* on grounded tasks. Our `gpt-4o-mini` (2024) beating the
+  later `gpt-4.1-mini` (2025) is the same effect in miniature.
+- **Where it differs is expected:** Vectara ranks `gemini-2.5-flash-lite` #1
+  because it is a faithful *generator*; we rank it mid-pack because it is a
+  middling *judge*. Different role, different leaderboard — both true.
+
+So directionally the harness tracks reality on what matters; the absolute AUCs
+are an optimistic ceiling because HaluEval's hallucinations are synthetic.
+
+Reproduce:
+
+```bash
+pip install -e .[semantic] matplotlib
+python -m benchmarks.build_dataset 250                     # 500 HaluEval cases (verbatim)
+OPENAI_API_KEY=... ANTHROPIC_API_KEY=... GEMINI_API_KEY=... \
+  python -m benchmarks.run_comparison gpt-4o-mini gemini/gemini-2.5-flash anthropic/claude-haiku-4-5
+python -m benchmarks.plot_results                          # regenerate the figures (free)
+```
+
+The residual similarity errors are **contradiction pairs** ("turn left" vs
+"turn right") — topically near-identical, so cosine rates them similar. That gap
+is exactly why groundedness uses **NLI entailment**, not cosine. CI enforces the
+similarity baseline and fails on regression (`.github/workflows/ci.yml`);
+groundedness/auditor self-skip without an API key.
 
 ## 🤝 Contributing
 
@@ -251,6 +355,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Built with ❤️ for reliable AI**
 
-[Documentation](docs/GETTING-STARTED.md) • [Examples](examples/) • [Research](docs/DRZERO_CONNECTION.md)
+[Quick Start](Start.md) • [Examples](examples/)
 
 </div>
