@@ -8,14 +8,14 @@
     "backend": "sentence-transformers (all-MiniLM-L6-v2)"
   },
   "groundedness": {
-    "dataset": "HaluEval QA (first 50 records, 100 balanced cases)",
+    "dataset": "HaluEval QA (first 250 records, 500 balanced cases)",
     "backend": "gpt-4o-mini",
     "auc": 0.869,
-    "precision": 0.814,
-    "recall": 0.96,
+    "precision": 0.794,
+    "recall": 0.988,
     "f1": 0.881,
-    "n": 100,
+    "n": 500,
     "operating_threshold": 0.85,
-    "note": "precision/recall at best-F1 operating point; rerun benchmarks.calibrate to refresh"
+    "note": "best of a 6-model comparison; see benchmarks/results/ for all models"
   }
 }

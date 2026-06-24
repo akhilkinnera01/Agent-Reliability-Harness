@@ -240,33 +240,55 @@ groundedness is scored against a sample of **[HaluEval](https://github.com/RUCAI
 (Li et al., 2023) — the standard hallucination-detection benchmark — so the
 numbers are comparable to published work rather than self-defined.
 
-| Metric | Backend | Dataset | AUC | Threshold | Precision / Recall |
-|--------|---------|---------|-----|-----------|--------------------|
-| Similarity (robustness/consistency) | `all-MiniLM-L6-v2` | 12 paraphrase / off-topic / contradiction pairs | **0.72** | 0.77 | 0.75 / 1.00 |
-| Groundedness | `gpt-4o-mini` | HaluEval QA, 100 cases | **0.87** | 0.75 | 0.81 / 0.96 |
+| Metric | Backend | Dataset | AUC | Precision / Recall |
+|--------|---------|---------|-----|--------------------|
+| Similarity (robustness/consistency) | `all-MiniLM-L6-v2` | 12 paraphrase / off-topic / contradiction pairs | **0.72** | 0.75 / 1.00 |
+| Groundedness | `gpt-4o-mini` | HaluEval QA, 500 cases | **0.87** | 0.79 / 0.99 |
 
 ### Model comparison — the harness must *discriminate*
 
-A reliability layer is only worth anything if a weaker agent scores measurably
-worse than a stronger one on the same data. Both models, same 100 HaluEval cases
-and the same seeded-flaw auditor document:
+A reliability layer is only worth anything if it ranks a weaker agent below a
+stronger one on the same data. **Six cheap models from three providers**, scored
+on the **same 500 HaluEval QA cases**:
 
-| Judge model | Groundedness AUC | Precision | Recall | F1 | Auditor recall | Clean false positives |
-|-------------|------------------|-----------|--------|-----|----------------|-----------------------|
-| `gpt-4o-mini`  | **0.87** | 0.81 | 0.96 | **0.88** | **0.67** (2/3) | 0 |
-| `gpt-3.5-turbo`| 0.85 | 0.75 | 0.92 | 0.83 | 0.33 (1/3) | 0 |
+| Provider | Judge model | AUC | Precision | Recall | F1 |
+|----------|-------------|-----|-----------|--------|-----|
+| OpenAI | `gpt-3.5-turbo` | 0.757 | 0.727 | 0.840 | 0.779 |
+| OpenAI | **`gpt-4o-mini`** | **0.869** | 0.794 | 0.988 | **0.881** |
+| OpenAI | `gpt-4.1-mini` | 0.805 | 0.766 | 0.892 | 0.824 |
+| Google | `gemini-2.5-flash-lite` | 0.787 | 0.770 | 0.872 | 0.818 |
+| Google | `gemini-2.5-flash` | 0.814 | 0.772 | 0.868 | 0.817 |
+| Anthropic | `claude-haiku-4-5` | 0.703 | 0.612 | 0.928 | 0.738 |
 
-`gpt-4o-mini` leads on every axis, and auditor recall doubles. The groundedness
-AUC sits near **0.85**, consistent with the ~0.66–0.88 range reported for
-LLM-based detectors on HaluEval — i.e. a realistic score, not a saturated 1.0.
+<p align="center">
+  <img src="benchmarks/plots/comparison.png" width="640"/><br/>
+  <img src="benchmarks/plots/roc.png" width="430"/>
+  <img src="benchmarks/plots/distributions.png" width="430"/>
+</p>
+
+What the data actually says (nothing here is tuned to a target):
+
+- **`gpt-4o-mini` leads the field** (AUC 0.87) and shows the cleanest score
+  separation — hallucinated answers collapse to 0, grounded ones to 1.
+- **Newer ≠ better on a narrow task.** Within OpenAI, `gpt-4o-mini` (2024) beats
+  the *later* `gpt-4.1-mini` (2025) at faithfulness detection.
+- **Size helps within a generation.** Google's larger `gemini-2.5-flash` (0.814)
+  edges its `flash-lite` sibling (0.787).
+- **`claude-haiku-4-5` trails** (AUC 0.70) with high recall / low precision: it
+  *over-trusts* answers, calling hallucinations grounded. A behavioral signal,
+  not a bug — and exactly the kind of thing the harness exists to surface.
+
+AUCs land in the **0.70–0.87** band, consistent with the range reported for
+LLM-based detectors on HaluEval — realistic scores, not saturated 1.0s.
 
 Reproduce:
 
 ```bash
-pip install -e .[semantic]
-python -m benchmarks.validate                              # similarity (offline) + scorecard
-OPENAI_API_KEY=... python -m benchmarks.validate           # full suite incl. groundedness/auditor
-OPENAI_API_KEY=... python -m benchmarks.compare_models gpt-4o-mini gpt-3.5-turbo
+pip install -e .[semantic] matplotlib
+python -m benchmarks.build_dataset 250                     # 500 HaluEval cases (verbatim)
+OPENAI_API_KEY=... ANTHROPIC_API_KEY=... GEMINI_API_KEY=... \
+  python -m benchmarks.run_comparison gpt-4o-mini gemini/gemini-2.5-flash anthropic/claude-haiku-4-5
+python -m benchmarks.plot_results                          # regenerate the figures (free)
 ```
 
 The residual similarity errors are **contradiction pairs** ("turn left" vs
