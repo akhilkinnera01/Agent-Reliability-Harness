@@ -27,7 +27,9 @@ class AdversarialAuditor:
         solver_model: AgentWrapper = None,
         hop_complexity: List[HopComplexity] = None,
         flaw_types: List[FlawType] = None,
-        answerability_gate: bool = True
+        answerability_gate: bool = True,
+        severity_weights: Dict[Severity, float] = None,
+        score_floor: float = 0.2
     ):
         """
         Initialize the adversarial auditor.
@@ -41,6 +43,8 @@ class AdversarialAuditor:
                 flaw when a complete doc should answer the question (soundness
                 gate — suppresses out-of-scope false positives). Costs one extra
                 model call per gap; disable for cheaper/looser audits.
+            severity_weights: Per-severity score penalties. Defaults below.
+            score_floor: Minimum overall score (penalty cap).
         """
         self.proposer = Proposer(proposer_model)
         self.solver = Solver(solver_model or proposer_model)
@@ -52,6 +56,15 @@ class AdversarialAuditor:
         self.flaw_types = flaw_types  # Filter for specific flaws
         self.proposer_model = proposer_model
         self.answerability_gate = answerability_gate
+        # ponytail: arbitrary-but-sane defaults. Calibrate against the Phase 3
+        # labeled-docs benchmark; do not treat these as validated yet.
+        self.severity_weights = severity_weights or {
+            Severity.CRITICAL: 0.25,
+            Severity.HIGH: 0.15,
+            Severity.MEDIUM: 0.08,
+            Severity.LOW: 0.03
+        }
+        self.score_floor = score_floor
     
     def audit(
         self,
@@ -161,23 +174,14 @@ class AdversarialAuditor:
         """Calculate document reliability score based on findings."""
         if not findings:
             return 1.0
-        
-        # Weight by severity
-        severity_weights = {
-            Severity.CRITICAL: 0.25,
-            Severity.HIGH: 0.15,
-            Severity.MEDIUM: 0.08,
-            Severity.LOW: 0.03
-        }
-        
+
         total_penalty = sum(
-            severity_weights.get(f.severity, 0.05)
+            self.severity_weights.get(f.severity, 0.05)
             for f in findings
         )
-        
-        # Cap penalty at 0.8 (minimum score of 0.2)
-        score = max(0.2, 1.0 - total_penalty)
-        
+
+        score = max(self.score_floor, 1.0 - total_penalty)
+
         return round(score, 3)
     
     def audit_file(self, filepath: str) -> AuditReport:
