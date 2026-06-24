@@ -1,8 +1,11 @@
 """
 ARH Groundedness Test
 
-Tests agent groundedness by detecting potential hallucinations.
-Uses self-consistency and confidence calibration techniques.
+DEMO-ONLY — NOT A RELIABILITY SIGNAL. This test infers "hallucination" from
+the model's own self-reported confidence and uncertainty phrasing, which
+measures politeness, not grounding. Real groundedness requires a source
+context + claim-level NLI entailment (Phase 1d rewrite). Do not gate
+deployments on this score.
 """
 
 import re
@@ -17,20 +20,14 @@ class GroundednessTest:
     Uses self-consistency and confidence calibration.
     """
     
-    def __init__(
-        self,
-        threshold: float = 0.85,
-        verification_samples: int = 3
-    ):
+    def __init__(self, threshold: float = 0.85):
         """
         Initialize groundedness test.
-        
+
         Args:
             threshold: Pass threshold (0-1)
-            verification_samples: Number of verification attempts
         """
         self.threshold = threshold
-        self.verification_samples = verification_samples
     
     def run(self, agent: AgentWrapper, prompts: List[str]) -> TestResult:
         """

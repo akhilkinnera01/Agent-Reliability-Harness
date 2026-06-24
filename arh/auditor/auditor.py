@@ -176,9 +176,10 @@ class AdversarialAuditor:
     
     def audit_simple(self, document: str, document_name: str = "document") -> AuditReport:
         """
-        Simple audit without requiring an LLM (for testing/demos).
-        Uses keyword matching instead of LLM calls.
-        
+        DEMO-ONLY — NOT A RELIABILITY SIGNAL. Keyword-matching audit with no
+        LLM; flaw findings are illustrative only. Use audit() with an LLM
+        proposer for real results.
+
         Args:
             document: Document text to audit
             document_name: Name for reporting

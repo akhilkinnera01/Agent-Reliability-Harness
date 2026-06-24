@@ -1,0 +1,32 @@
+# Local-only working & planning docs (never push)
+CLAUDE.md
+IMPLEMENTATION_PLAN.md
+
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+secrets.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Tooling / OS
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+
+# Model caches (sentence-transformers / torch downloads)
+.cache/

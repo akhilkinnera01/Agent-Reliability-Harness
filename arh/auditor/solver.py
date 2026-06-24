@@ -127,9 +127,9 @@ MISSING: [what additional info would be needed, or "N/A"]"""
     
     def answer_simple(self, question: str, document: str) -> SolverResponse:
         """
-        Simple answer method without LLM (for testing/demos).
-        Searches document for keywords from the question.
-        
+        DEMO-ONLY — NOT A RELIABILITY SIGNAL. Answers by keyword overlap, not
+        comprehension; use the LLM solver for real audits.
+
         Args:
             question: The question to answer
             document: The document to search
