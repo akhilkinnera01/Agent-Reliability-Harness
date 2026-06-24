@@ -112,6 +112,8 @@ class ReliabilityHarness:
         weighted_sum = 0
         
         for name, result in self.results.items():
+            if result.status == TestStatus.SKIPPED:
+                continue  # e.g. groundedness with no source context — undefined, not zero
             weight = weights.get(name, 0.25)
             weighted_sum += result.score * weight
             total_weight += weight
